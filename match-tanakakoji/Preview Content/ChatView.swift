@@ -1,7 +1,8 @@
 import SwiftUI
 import Firebase
 import FirebaseFirestore
-import FirebaseFirestoreSwift
+import FirebaseAuth
+//import FirebaseFirestoreSwift
 
 struct ChatView: View {
     @State private var messageText = "" // 入力するメッセージ
