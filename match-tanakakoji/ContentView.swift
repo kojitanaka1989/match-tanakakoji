@@ -31,7 +31,7 @@ struct ContentView: View {
                         .frame(width: 60, height: 60)
                         .foregroundColor(.green)
 
-                    Text("ようこそ！")
+                    Text("ずっといっしょ")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)

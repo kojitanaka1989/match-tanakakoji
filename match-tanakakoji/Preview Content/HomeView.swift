@@ -4,6 +4,7 @@ import FirebaseFirestore
 
 struct HomeView: View {
     @Environment(\.presentationMode) var presentationMode
+    @FocusState private var focusedField: Bool // 🔹 フォーカス状態管理
     @State private var name: String = "ゲスト"
     @State private var bio: String = "自己紹介を追加してください"
     @State private var age: Int = 18
@@ -11,8 +12,9 @@ struct HomeView: View {
     @State private var selectedPrefecture = "北海道"
     @State private var selectedCity = "札幌市中央区"
     @State private var selectedDisability = "未設定"
-    @State private var navigateToHomeView2 = false  // 変更
+    @State private var navigateToHomeView2 = false
     @State private var message = ""
+    @State private var keyboardHeight: CGFloat = 0 // 🔹 キーボード高さを管理
     
     let genders = ["未設定", "男性", "女性", "その他"]
     let prefectures = ["北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県",
@@ -70,94 +72,101 @@ struct HomeView: View {
         "大分県": ["大分市", "別府市", "中津市", "日田市", "佐伯市", "臼杵市", "津久見市", "竹田市", "豊後高田市", "杵築市", "宇佐市", "豊後大野市", "由布市", "国東市", "東国東郡姫島村", "速見郡日出町", "玖珠郡九重町", "玖珠郡玖珠町"],
         "宮崎県": ["宮崎市", "都城市", "延岡市", "日南市", "小林市", "日向市", "串間市", "西都市", "えびの市", "北諸県郡三股町", "西諸県郡高原町", "東諸県郡国富町", "東諸県郡綾町", "児湯郡高鍋町", "児湯郡新富町", "児湯郡西米良村", "児湯郡木城町", "児湯郡川南町", "児湯郡都農町", "東臼杵郡門川町", "東臼杵郡諸塚村", "東臼杵郡椎葉村", "東臼杵郡美郷町", "西臼杵郡高千穂町", "西臼杵郡日之影町", "西臼杵郡五ヶ瀬町"],
         "鹿児島県": ["鹿児島市", "鹿屋市", "枕崎市", "阿久根市", "出水市", "指宿市", "西之表市", "垂水市", "薩摩川内市", "日置市", "曽於市", "霧島市", "いちき串木野市", "南さつま市", "志布志市", "奄美市", "南九州市", "伊佐市", "姶良市", "鹿児島郡三島村", "鹿児島郡十島村", "薩摩郡さつま町", "出水郡長島町", "姶良郡湧水町", "曽於郡大崎町", "肝属郡東串良町", "肝属郡錦江町", "肝属郡南大隅町", "肝属郡肝付町", "熊毛郡中種子町", "熊毛郡南種子町", "熊毛郡屋久島町", "大島郡大和村", "大島郡宇検村", "大島郡瀬戸内町", "大島郡龍郷町", "大島郡喜界町", "大島郡徳之島町", "大島郡天城町", "大島郡伊仙町", "大島郡和泊町", "大島郡知名町", "大島郡与論町"],
-        "沖縄県": ["那覇市", "宜野湾市", "石垣市", "浦添市", "名護市", "糸満市", "沖縄市", "豊見城市", "うるま市", "宮古島市", "南城市", "国頭郡国頭村", "国頭郡大宜味村", "国頭郡東村", "国頭郡今帰仁村", "国頭郡本部町", "国頭郡恩納村", "国頭郡宜野座村", "国頭郡金武町", "国頭郡伊江村", "中頭郡読谷村", "中頭郡嘉手納町", "中頭郡北谷町", "中頭郡北中城村", "中頭郡中城村", "中頭郡西原町", "島尻郡与那原町", "島尻郡南風原町", "島尻郡渡嘉敷村", "島尻郡座間味村", "島尻郡粟国村", "島尻郡渡名喜村", "島尻郡南大東村", "島尻郡北大東村", "島尻郡伊平屋村", "島尻郡伊是名村", "島尻郡久米島町", "島尻郡八重瀬町", "宮古郡多良間村", "八重山郡竹富町", "八重山郡与那国町"],
+        "沖縄県": ["那覇市", "宜野湾市", "石垣市", "浦添市", "名護市", "糸満市", "沖縄市", "豊見城市", "うるま市", "宮古島市", "南城市", "国頭郡国頭村", "国頭郡大宜味村", "国頭郡東村", "国頭郡今帰仁村", "国頭郡本部町", "国頭郡恩納村", "国頭郡宜野座村", "国頭郡金武町", "国頭郡伊江村", "中頭郡読谷村", "中頭郡嘉手納町", "中頭郡北谷町", "中頭郡北中城村", "中頭郡中城村", "中頭郡西原町", "島尻郡与那原町", "島尻郡南風原町", "島尻郡渡嘉敷村", "島尻郡座間味村", "島尻郡粟国村", "島尻郡渡名喜村", "島尻郡南大東村", "島尻郡北大東村", "島尻郡伊平屋村", "島尻郡伊是名村", "島尻郡久米島町", "島尻郡八重瀬町", "宮古郡多良間村", "八重山郡竹富町", "八重山郡与那国町"
+               ]
     ]
-    
     var body: some View {
         VStack(spacing: 20) {
-            Text("ようこそ！")
+            Text("ステキなであいをみつけよう🎉")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .padding()
             
-            Text("ステキなであいをみつけよう🎉")
-                .font(.subheadline)
-                .foregroundColor(.gray)
+            //            Text("ステキなであいをみつけよう🎉")
+            //                .font(.subheadline)
+            //                .foregroundColor(.gray)
             
-            VStack(alignment: .leading, spacing: 10) {
-                Text("名前")
-                    .font(.headline)
-                TextField("名前を入力", text: $name)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("名前")
+                        .font(.headline)
+                    TextField("名前を入力", text: $name)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                        .focused($focusedField)
+                    
+                    Text("年齢")
+                        .font(.headline)
+                    Picker("年齢を選択", selection: $age) {
+                        ForEach(18...99, id: \.self) { age in
+                            Text("\(age)歳").tag(age)
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                    .frame(height: 100)
                     .padding(.horizontal)
-                
-                Text("年齢")
-                    .font(.headline)
-                Picker("年齢を選択", selection: $age) {
-                    ForEach(18...99, id: \.self) { age in
-                        Text("\(age)歳").tag(age)
+                    
+                    Text("性別")
+                        .font(.headline)
+                    Picker("性別を選択", selection: $selectedGender) {
+                        ForEach(genders, id: \.self) { gender in
+                            Text(gender).tag(gender)
+                        }
                     }
-                }
-                .pickerStyle(WheelPickerStyle())
-                .frame(height: 100)
-                .padding(.horizontal)
-                
-                Text("性別")
-                    .font(.headline)
-                Picker("性別を選択", selection: $selectedGender) {
-                    ForEach(genders, id: \.self) { gender in
-                        Text(gender).tag(gender)
-                    }
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                
-                Text("都道府県")
-                    .font(.headline)
-                Picker("都道府県を選択", selection: $selectedPrefecture) {
-                    ForEach(prefectures, id: \.self) { prefecture in
-                        Text(prefecture).tag(prefecture)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-                .onChange(of: selectedPrefecture) { newPrefecture in
-                    selectedCity = citiesByPrefecture[newPrefecture]?.first ?? "未設定"
-                }
-                .padding(.horizontal)
-                
-                Text("市町村")
-                    .font(.headline)
-                Picker("市町村を選択", selection: $selectedCity) {
-                    ForEach(citiesByPrefecture[selectedPrefecture] ?? ["未設定"], id: \.self) { city in
-                        Text(city).tag(city)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-                .padding(.horizontal)
-                
-                Text("特性（障害の種類）")
-                    .font(.headline)
-                Picker("特性を選択", selection: $selectedDisability) {
-                    ForEach(disabilityTypes, id: \.self) { disability in
-                        Text(disability).tag(disability)
-                    }
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                
-                Text("じぶんのこと")
-                    .font(.headline)
-                TextField("じぶんのことをかいてね", text: $bio)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .pickerStyle(SegmentedPickerStyle())
                     .padding(.horizontal)
+                    
+                    Text("都道府県")
+                        .font(.headline)
+                    Picker("都道府県を選択", selection: $selectedPrefecture) {
+                        ForEach(prefectures, id: \.self) { prefecture in
+                            Text(prefecture).tag(prefecture)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .onChange(of: selectedPrefecture) { newPrefecture in
+                        selectedCity = citiesByPrefecture[newPrefecture]?.first ?? "未設定"
+                    }
+                    .padding(.horizontal)
+                    
+                    Text("市町村")
+                        .font(.headline)
+                    Picker("市町村を選択", selection: $selectedCity) {
+                        ForEach(citiesByPrefecture[selectedPrefecture] ?? ["未設定"], id: \.self) { city in
+                            Text(city).tag(city)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .padding(.horizontal)
+                    
+                    Text("特性（障害の種類）")
+                        .font(.headline)
+                    Picker("特性を選択", selection: $selectedDisability) {
+                        ForEach(disabilityTypes, id: \.self) { disability in
+                            Text(disability).tag(disability)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+                    
+                    Text("じぶんのこと")
+                        .font(.headline)
+                    TextField("じぶんのことをかいてね", text: $bio)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                        .focused($focusedField)
+                    
+                    // 🔹 スペースを作成して、キーボードが被らないようにする
+                    Spacer()
+                        .frame(height: keyboardHeight)
+                }
+                .padding()
             }
-            .padding()
             
-            // 🔹 Firestoreに保存して画面遷移
             Button(action: {
                 saveUserData()
             }) {
-                Text("登録して次へ") // 変更
+                Text("登録して次へ")
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -177,6 +186,12 @@ struct HomeView: View {
         .navigationBarBackButtonHidden(true)
         .navigationDestination(isPresented: $navigateToHomeView2) {
             HomeView2()
+        }
+        .onAppear {
+            addKeyboardObservers()
+        }
+        .onDisappear {
+            removeKeyboardObservers()
         }
     }
     
@@ -207,6 +222,27 @@ struct HomeView: View {
                 navigateToHomeView2 = true
             }
         }
+    }
+    
+    // 🔹 キーボード表示/非表示の監視
+    func addKeyboardObservers() {
+        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                withAnimation {
+                    keyboardHeight = keyboardFrame.height - 40
+                }
+            }
+        }
+        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+            withAnimation {
+                keyboardHeight = 0
+            }
+        }
+    }
+    
+    func removeKeyboardObservers() {
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
     }
 }
 
