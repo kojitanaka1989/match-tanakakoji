@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseAuth
+import FirebaseFirestore
 
 struct ProfileHomeView: View {
     @State private var userName: String = "ゲスト"
@@ -10,14 +11,14 @@ struct ProfileHomeView: View {
     @State private var profileImage: UIImage? = UIImage(named: "default_profile")
     @State private var searchText: String = ""
     @State private var isShowingSearchView = false
-
+    
     var body: some View {
         VStack(spacing: 20) {
             Text("マイページ")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .padding()
-
+            
             // プロフィール画像
             if let image = profileImage {
                 Image(uiImage: image)
@@ -31,7 +32,7 @@ struct ProfileHomeView: View {
                     .frame(width: 120, height: 120)
                     .foregroundColor(.gray)
             }
-
+            
             Text(userName)
                 .font(.title)
                 .fontWeight(.bold)
@@ -42,9 +43,9 @@ struct ProfileHomeView: View {
             Text(bio)
                 .multilineTextAlignment(.center)
                 .padding()
-
+            
             Divider()
-
+            
             // 検索ボタン
             Button(action: {
                 isShowingSearchView = true
@@ -64,46 +65,66 @@ struct ProfileHomeView: View {
             .fullScreenCover(isPresented: $isShowingSearchView) {
                 UserSearchView()
             }
-
+            
             // メニュー
             VStack(spacing: 10) {
                 NavigationLink(destination: MatchListView()) {
                     ProfileMenuItem(title: "マッチリスト", iconName: "heart.fill")
                 }
-
+                
                 NavigationLink(destination: ChatListView()) {
                     ProfileMenuItem(title: "メッセージ", iconName: "message.fill")
                 }
-
+                
                 NavigationLink(destination: ProfileEditView()) {
                     ProfileMenuItem(title: "プロフィール編集", iconName: "pencil")
                 }
-
+                
                 NavigationLink(destination: SettingsView()) {
                     ProfileMenuItem(title: "設定", iconName: "gearshape.fill")
                 }
             }
-
+            
             Spacer()
         }
-//        .navigationBarTitle("マイページ", displayMode: .inline)
     }
 }
 
-// 検索ページビュー
+// 🔹 検索ページビュー
 struct UserSearchView: View {
     @Environment(\.presentationMode) var presentationMode
     @State private var searchQuery: String = ""
+    @State private var users: [User] = []
     
+    var filteredUsers: [User] {
+        if searchQuery.isEmpty {
+            return users
+        } else {
+            return users.filter { user in
+                user.name.localizedCaseInsensitiveContains(searchQuery) ||
+                user.location.localizedCaseInsensitiveContains(searchQuery)
+            }
+        }
+    }
+
     var body: some View {
         NavigationView {
             VStack {
                 TextField("検索キーワードを入力", text: $searchQuery)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding()
-                
-                List {
-                    Text("検索結果がここに表示されます")
+
+                List(filteredUsers) { user in
+                    VStack(alignment: .leading) {
+                        Text(user.name)
+                            .font(.headline)
+                        Text("\(user.age)歳・\(user.gender)")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        Text(user.location)
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
                 }
                 .navigationTitle("ユーザー検索")
                 .toolbar {
@@ -115,14 +136,51 @@ struct UserSearchView: View {
                 }
             }
         }
+        .onAppear {
+            fetchUsers()
+        }
+    }
+
+    // 🔹 Firestore からユーザーを取得する関数
+    func fetchUsers() {
+        let db = Firestore.firestore()
+        db.collection("users").getDocuments { snapshot, error in
+            if let error = error {
+                print("データ取得エラー: \(error.localizedDescription)")
+                return
+            }
+
+            guard let documents = snapshot?.documents else { return }
+            self.users = documents.compactMap { doc -> User? in
+                let data = doc.data()
+                return User(
+                    id: doc.documentID,
+                    name: data["name"] as? String ?? "未設定",
+                    age: data["age"] as? Int ?? 18,
+                    gender: data["gender"] as? String ?? "未設定",
+                    location: "\(data["prefecture"] as? String ?? "未設定") \(data["city"] as? String ?? "未設定")",
+                    bio: data["bio"] as? String ?? "自己紹介なし"
+                )
+            }
+        }
     }
 }
 
-// メニューのUIコンポーネント
+// 🔹 Firestore のデータを受け取るための User 構造体
+struct User: Identifiable {
+    var id: String
+    var name: String
+    var age: Int
+    var gender: String
+    var location: String
+    var bio: String
+}
+
+// 🔹 メニューのUIコンポーネント
 struct ProfileMenuItem: View {
     var title: String
     var iconName: String
-
+    
     var body: some View {
         HStack {
             Image(systemName: iconName)
@@ -139,7 +197,7 @@ struct ProfileMenuItem: View {
     }
 }
 
-// 仮のビュー（エラー回避用）
+// 🔹 仮のビュー（エラー回避用）
 struct MatchListView: View {
     var body: some View {
         Text("マッチリスト画面")
