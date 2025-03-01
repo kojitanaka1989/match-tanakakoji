@@ -86,7 +86,7 @@ struct ProfileHomeView: View {
 
             Spacer()
         }
-        .navigationBarTitle("マイページ", displayMode: .inline)
+//        .navigationBarTitle("マイページ", displayMode: .inline)
     }
 }
 
