@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  match-tanakakoji
-//
-//  Created by 田中康志 on 2025/02/23.
-//
-
 import SwiftUI
 import FirebaseAuth
 
@@ -14,19 +7,25 @@ struct ContentView: View {
     @State private var message = ""
     @State private var isRegistered = false  // 登録成功時に画面遷移するためのフラグ
     @FocusState private var isEmailFieldFocused: Bool // キーボードのフォーカス管理
+    @FocusState private var isPasswordFieldFocused: Bool // パスワードフィールドのフォーカス管理
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // 🍀 幸せを呼ぶ四葉のクローバーの背景画像
-                Image("clover_background")
+                // 🔹 背景画像の追加（全画面表示）
+                Image("sample_document3") // `Assets.xcassets` に追加した画像の名前
                     .resizable()
                     .scaledToFill()
-                    .edgesIgnoringSafeArea(.all)
-                    .opacity(0.3) // 画像の透明度を調整
+                    .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                    .ignoresSafeArea()
+
+                // 🔹 半透明のオーバーレイを追加して見やすくする
+                Color.black.opacity(0.3)
+                    .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                    .ignoresSafeArea()
 
                 VStack(spacing: 20) {
-                    // 🍀 四葉のクローバーアイコンに変更
+                    // 🍀 四葉のクローバーアイコン（デザイン変更）
                     Image(systemName: "leaf.fill")
                         .resizable()
                         .frame(width: 60, height: 60)
@@ -35,11 +34,11 @@ struct ContentView: View {
                     Text("ようこそ！")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
 
                     Text("ステキなであいをみつけよう🍀")
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.white)
 
                     VStack(spacing: 15) {
                         TextField("メールアドレス", text: $email)
@@ -57,6 +56,7 @@ struct ContentView: View {
                             .cornerRadius(10)
                             .autocapitalization(.none)
                             .textContentType(.password)
+                            .focused($isPasswordFieldFocused)
                     }
                     .padding(.horizontal, 20)
 
@@ -91,10 +91,7 @@ struct ContentView: View {
                 }
                 .padding()
             }
-            .onAppear {
-                isEmailFieldFocused = true  // 画面表示時にキーボードを開く
-            }
-            // 登録・ログイン成功後に HomeView へ遷移
+            // 🔹 `onAppear` を削除して自動フォーカスを防ぐ
             .navigationDestination(isPresented: $isRegistered) {
                 HomeView()
             }
